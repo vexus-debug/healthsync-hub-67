@@ -15,6 +15,10 @@ import { createTestForm, getNextSerial } from "@/lib/supabaseQueries";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchLabTests, fetchTestCategories } from "@/lib/labTests";
 import { toast } from "sonner";
+import { PaymentCaptureCard } from "@/components/billing/PaymentCaptureCard";
+import { createInvoiceWithPayment, emptyCapture } from "@/lib/billing";
+import { printReceipt } from "@/lib/printReceipt";
+import { priceForTest, departmentForTest } from "@/lib/labCatalog";
 
 // Source of truth: lab test requisition form. Order, wording, and
 // punctuation are matched exactly to the printed form. Do not reword.
@@ -136,6 +140,8 @@ const NewTestForm = () => {
   const toggleTest = (t: string) =>
     setTests((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
 
+  const [capture, setCapture] = useState(emptyCapture());
+  const billItems = tests.map((t) => ({ description: t, department: departmentForTest(t), quantity: 1, unit_price: priceForTest(t) }));
   const onSubmit = (openAfter: boolean) => async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.patientName.trim() || !form.age || tests.length === 0) {
@@ -166,6 +172,10 @@ const NewTestForm = () => {
         created_by: user?.id,
       });
       queryClient.invalidateQueries({ queryKey: ["test_forms"] });
+      try {
+        const inv = await createInvoiceWithPayment({ patientName: created.patient_name, patientPhone: form.phone, source: "Lab", reference: created.serial, items: billItems, capture, userId: user?.id });
+        if (inv.amount_paid > 0) void printReceipt(inv, "80mm");
+      } catch (be: any) { toast.error("Form saved but bill failed: " + (be.message || "")); }
       toast.success("Test form created", { description: `Serial: ${created.serial}` });
       if (autoLabels) {
         const lf = { ...created, tests_requested: created.tests_requested ?? tests } as never;
@@ -315,6 +325,8 @@ const NewTestForm = () => {
             </CardContent>
           </Card>
         </div>
+
+        <div className="lg:col-span-3"><PaymentCaptureCard items={billItems} value={capture} onChange={setCapture} /></div>
 
         <div className="lg:col-span-3 sticky bottom-0 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-card/95 backdrop-blur-md border-t border-border flex flex-wrap items-center justify-between gap-3 z-20">
           <p className="text-xs text-muted-foreground">

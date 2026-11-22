@@ -32,6 +32,8 @@ import { CriticalBanner, CriticalValueDialog } from "@/components/bench/Critical
 import { AST_KEY, REMARKS_KEY, CRITICAL_KEY, parseAst, findCriticalValues, isNoticeComplete, CriticalNotice } from "@/lib/bench";
 import { sendResultSms } from "@/lib/sms.functions";
 import { supabase as smsDb } from "@/integrations/supabase/client";
+import { fetchInvoiceByReference, isReleaseBlocked } from "@/lib/billing";
+import { naira, balanceDue } from "@/lib/accounting";
 import { approveResult, deleteTestForm, reopenApprovedResult } from "@/lib/resultAdmin";
 
 const ResultEntry = () => {
@@ -197,6 +199,11 @@ const ResultEntry = () => {
   };
 
   const handleApprove = async () => {
+    const inv = await fetchInvoiceByReference(form.serial).catch(() => null);
+    if (isReleaseBlocked(inv, false)) {
+      if (!isLabAdmin) { toast.error(`Bill not paid — balance ${naira(balanceDue(inv!))}. Collect payment or ask an admin.`); return; }
+      if (!window.confirm(`Bill has an unpaid balance of ${naira(balanceDue(inv!))}. Approve anyway (admin override)?`)) return;
+    }
     if (criticalBlocked) { setCriticalOpen(true); toast.error("Log the physician call for critical values first"); return; }
     setSaving(true);
     try {

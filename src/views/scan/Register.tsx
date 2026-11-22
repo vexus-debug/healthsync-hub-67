@@ -24,6 +24,10 @@ import {
 } from "@/lib/scanQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { PaymentCaptureCard } from "@/components/billing/PaymentCaptureCard";
+import { createInvoiceWithPayment, emptyCapture } from "@/lib/billing";
+import { printReceipt } from "@/lib/printReceipt";
+import { priceForScan } from "@/lib/scanTemplates";
 import { ChevronDown, ChevronUp, Search, UserCheck, UserPlus } from "lucide-react";
 
 const MODALITIES = Object.keys(SCAN_TYPES_BY_MODALITY);
@@ -69,6 +73,8 @@ const Register = () => {
     enabled: !existing && query.trim().length >= 2,
   });
 
+  const [capture, setCapture] = useState(emptyCapture());
+  const billItems = s.modality ? [{ description: `${s.modality} scan`, department: "Imaging & Scans", quantity: 1, unit_price: priceForScan(s.modality) }] : [];
   const scanTypeOptions = useMemo(() => SCAN_TYPES_BY_MODALITY[s.modality] ?? [], [s.modality]);
   useEffect(() => {
     if (scanTypeOptions.length && !scanTypeOptions.includes(s.scan_type) && s.scan_type !== "Other") {
@@ -132,6 +138,10 @@ const Register = () => {
           created_by: user?.id ?? null,
         });
       }
+      try {
+        const inv = await createInvoiceWithPayment({ patientName, patientPhone, source: "Scan", reference: scan.serial, items: billItems.map((i) => ({ ...i, description: `${finalScanType} (${s.modality})` })), capture, userId: user?.id });
+        if (inv.amount_paid > 0) void printReceipt(inv, "80mm");
+      } catch (be: any) { toast({ title: "Scan saved but bill failed", description: be.message, variant: "destructive" }); }
       return scan;
     },
     onSuccess: (scan) => {
@@ -319,6 +329,8 @@ const Register = () => {
             )}
           </CardContent>
         </Card>
+
+        <PaymentCaptureCard items={billItems} value={capture} onChange={setCapture} />
 
         <div className="flex justify-end gap-2 pb-4">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancel</Button>

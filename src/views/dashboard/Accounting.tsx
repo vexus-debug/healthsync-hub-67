@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { SITE } from "@/lib/site";
+import { printReceipt } from "@/lib/printReceipt";
 import {
   DEPARTMENTS, PAYMENT_METHODS, EXPENSE_CATEGORIES, naira, invoiceTotals, balanceDue, agingBucket,
   profitAndLoss, sumBy, monthRange, type Invoice, type InvoiceItem, type Payment, type Expense,
@@ -42,7 +43,8 @@ function useMonthData(ym: string) {
 
 const statusVariant = (s: string) => (s === "Paid" ? "default" : s === "Void" ? "outline" : s === "Partial" ? "secondary" : "destructive") as any;
 
-function printReceipt(inv: Invoice) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function printReceiptOld(inv: Invoice) {
   const w = window.open("", "_blank", "width=420,height=640");
   if (!w) return;
   const items = (inv.invoice_items ?? []).map((i) => `<tr><td>${i.description}</td><td style="text-align:right">${i.quantity} × ${naira(i.unit_price)}</td></tr>`).join("");
@@ -319,7 +321,8 @@ const Accounting = () => {
                     <TableCell><Badge variant={statusVariant(i.status)}>{i.status}</Badge></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       {balanceDue(i) > 0 && <Button size="sm" variant="outline" onClick={() => setPayFor(i)}><Wallet className="h-4 w-4 mr-1" />Pay</Button>}
-                      <Button size="icon" variant="ghost" aria-label="Print receipt" onClick={() => printReceipt(i)}><Printer className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" aria-label="Print receipt" onClick={() => printReceipt(i, "80mm")}><Printer className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" aria-label="Print A4 receipt" onClick={() => printReceipt(i, "A4")}>A4</Button>
                       {isSenior && i.status !== "Void" && <Button size="icon" variant="ghost" aria-label="Void invoice" onClick={() => confirm("Void this invoice?") && voidInv.mutate(i.id)}><Ban className="h-4 w-4" /></Button>}
                     </TableCell>
                   </TableRow>
