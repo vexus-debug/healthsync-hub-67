@@ -1,0 +1,79 @@
+[
+  {
+    "capability": "code",
+    "source": "GitHub default branch: vexus-debug/healthsync-hub-82",
+    "outcome": "Imported the default branch as-is, excluding repository metadata, local secrets, and Lovable project metadata",
+    "status": "imported",
+    "next_action": "None"
+  },
+  {
+    "capability": "schema",
+    "source": "Supabase configuration and application references present; no schema export detected",
+    "outcome": "Preserve source integration without schema changes",
+    "status": "pending",
+    "next_action": "No action in this import-only request"
+  },
+  {
+    "capability": "records",
+    "source": "No record export attached or detected",
+    "outcome": "Existing records not imported",
+    "status": "pending",
+    "next_action": "No action in this import-only request"
+  },
+  {
+    "capability": "auth identities",
+    "source": "Supabase integration present; no user export detected",
+    "outcome": "Preserve source auth code without identity migration",
+    "status": "pending",
+    "next_action": "No action in this import-only request"
+  },
+  {
+    "capability": "authorization",
+    "source": "Protected dashboard code and a Supabase function are present",
+    "outcome": "Preserve source authorization code without changes",
+    "status": "pending",
+    "next_action": "No action in this import-only request"
+  },
+  {
+    "capability": "uploaded file bytes",
+    "source": "Repository image assets",
+    "outcome": "Copied repository image assets",
+    "status": "imported",
+    "next_action": "None"
+  },
+  {
+    "capability": "external providers",
+    "source": "Supabase variables and client files are present",
+    "outcome": "Preserved source integration; excluded local .env secrets",
+    "status": "pending",
+    "next_action": "No provider changes in this import-only request"
+  },
+  {
+    "capability": "public endpoints, callbacks, webhooks, and schedules",
+    "source": "Supabase function folder is present; other callers not evaluated",
+    "outcome": "Preserve tracked endpoint code as-is",
+    "status": "pending",
+    "next_action": "No deployment or cutover in this import-only request"
+  },
+  {
+    "capability": "secrets",
+    "source": "Source .env excluded from inspection and import",
+    "outcome": "Do not copy local secret values",
+    "status": "pending",
+    "next_action": "No secret setup in this import-only request"
+  },
+  {
+    "capability": "cutover",
+    "source": "Not requested",
+    "outcome": "No provider or URL cutover",
+    "status": "pending",
+    "next_action": "None"
+  },
+  {
+    "capability": "verification",
+    "source": "User requested no checks or tests",
+    "outcome": "No application checks or tests run",
+    "status": "pending",
+    "next_action": "User will verify"
+  }
+]
