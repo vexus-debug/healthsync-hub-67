@@ -16,8 +16,9 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { SITE } from "@/lib/site";
 import { printReceipt } from "@/lib/printReceipt";
+import TillCloseout from "@/components/accounting/TillCloseout";
 import {
-  DEPARTMENTS, PAYMENT_METHODS, EXPENSE_CATEGORIES, naira, invoiceTotals, balanceDue, agingBucket,
+  DEPARTMENTS, PAYMENT_METHODS, EXPENSE_CATEGORIES, EXPENSE_CATEGORY_HINTS, naira, invoiceTotals, balanceDue, agingBucket,
   profitAndLoss, sumBy, monthRange, type Invoice, type InvoiceItem, type Payment, type Expense,
 } from "@/lib/accounting";
 
@@ -179,14 +180,14 @@ function PaymentDialog({ inv, onClose }: { inv: Invoice | null; onClose: () => v
 
 function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const qc = useQueryClient(); const { user } = useAuth();
-  const [f, setF] = useState({ category: "Reagents & Consumables", vendor: "", description: "", amount: "", method: "Cash", expense_date: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ category: "Direct Lab Consumables", vendor: "", description: "", amount: "", receipt_url: "", method: "Cash", expense_date: new Date().toISOString().slice(0, 10) });
   const save = useMutation({
     mutationFn: async () => {
       if (Number(f.amount) <= 0) throw new Error("Enter an amount");
-      const { error } = await db.from("expenses").insert({ ...f, amount: Number(f.amount), recorded_by: user?.id });
+      const { error } = await db.from("expenses").insert({ ...f, receipt_url: f.receipt_url || null, amount: Number(f.amount), recorded_by: user?.id });
       if (error) throw error;
     },
-    onSuccess: () => { toast({ title: "Expense saved" }); qc.invalidateQueries({ queryKey: ["accounting"] }); setF({ ...f, vendor: "", description: "", amount: "" }); onOpenChange(false); },
+    onSuccess: () => { toast({ title: "Expense saved" }); qc.invalidateQueries({ queryKey: ["accounting"] }); setF({ ...f, vendor: "", description: "", amount: "", receipt_url: "" }); onOpenChange(false); },
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
   return (
@@ -194,7 +195,8 @@ function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
       <DialogContent>
         <DialogHeader><DialogTitle>Log expense</DialogTitle></DialogHeader>
         <div><Label>Category</Label><Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}><SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+          <SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+          <p className="text-xs text-muted-foreground mt-1">{EXPENSE_CATEGORY_HINTS[f.category]}</p></div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Vendor / payee</Label><Input value={f.vendor} onChange={(e) => setF({ ...f, vendor: e.target.value })} /></div>
           <div><Label>Amount (₦)</Label><Input type="number" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></div>
@@ -203,6 +205,7 @@ function ExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
             <SelectContent>{PAYMENT_METHODS.filter((m) => m !== "HMO").map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
         </div>
         <div><Label>Description</Label><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+        <div><Label>Receipt link (optional)</Label><Input placeholder="https://… photo or document of the receipt" value={f.receipt_url} onChange={(e) => setF({ ...f, receipt_url: e.target.value })} /></div>
         <DialogFooter><Button onClick={() => save.mutate()} disabled={save.isPending}>Save expense</Button></DialogFooter>
       </DialogContent>
     </Dialog>
@@ -267,8 +270,8 @@ const Accounting = () => {
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="till">Today's till</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses & Outgoings</TabsTrigger>
+            <TabsTrigger value="till">Till closeout</TabsTrigger>
             <TabsTrigger value="debtors">Debtors</TabsTrigger>
           </TabsList>
 
@@ -333,13 +336,14 @@ const Accounting = () => {
 
           <TabsContent value="expenses">
             <div className="overflow-x-auto"><Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Vendor / details</TableHead><TableHead className="text-right">Amount</TableHead><TableHead /></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Vendor / details</TableHead><TableHead>Paid by</TableHead><TableHead className="text-right">Amount</TableHead><TableHead /></TableRow></TableHeader>
               <TableBody>
-                {data.expenses.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No expenses this month.</TableCell></TableRow>}
+                {data.expenses.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No expenses this month.</TableCell></TableRow>}
                 {data.expenses.map((e) => (
                   <TableRow key={e.id}>
                     <TableCell>{e.expense_date}</TableCell><TableCell>{e.category}</TableCell>
-                    <TableCell>{e.vendor}<div className="text-xs text-muted-foreground">{e.description}</div></TableCell>
+                    <TableCell>{e.vendor}<div className="text-xs text-muted-foreground">{e.description}</div>{e.receipt_url && <a href={e.receipt_url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Receipt</a>}</TableCell>
+                    <TableCell>{e.method}</TableCell>
                     <TableCell className="text-right">{naira(e.amount)}</TableCell>
                     <TableCell>{isSenior && <Button size="icon" variant="ghost" aria-label="Delete expense" onClick={() => confirm("Delete this expense?") && delExp.mutate(e.id)}><Trash2 className="h-4 w-4" /></Button>}</TableCell>
                   </TableRow>
@@ -349,15 +353,7 @@ const Accounting = () => {
           </TabsContent>
 
           <TabsContent value="till">
-            <Card><CardHeader><CardTitle className="text-base">Collected today ({today})</CardTitle></CardHeader>
-              <CardContent>
-                {ym !== thisMonth() && <p className="text-sm text-muted-foreground mb-2">Switch to the current month to see today's till.</p>}
-                <Table><TableBody>
-                  {PAYMENT_METHODS.map((m) => <TableRow key={m}><TableCell>{m}</TableCell><TableCell className="text-right">{naira(calc.tillToday.find(([k]) => k === m)?.[1] ?? 0)}</TableCell></TableRow>)}
-                  <TableRow><TableCell className="font-bold">Total</TableCell><TableCell className="text-right font-bold">{naira(calc.tillToday.reduce((s, [, v]) => s + v, 0))}</TableCell></TableRow>
-                </TableBody></Table>
-                <p className="text-xs text-muted-foreground mt-2">Count the cash drawer and compare with the Cash line before closing.</p>
-              </CardContent></Card>
+            <TillCloseout byMethod={calc.tillToday} cashExpenses={data.expenses.filter((e) => e.expense_date === today && e.method === "Cash").reduce((t, e) => t + Number(e.amount), 0)} today={today} isCurrentMonth={ym === thisMonth()} />
           </TabsContent>
 
           <TabsContent value="debtors" className="space-y-3">

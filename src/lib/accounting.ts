@@ -1,11 +1,24 @@
 export const DEPARTMENTS = ["Haematology", "Chemical Pathology", "Microbiology", "Urinalysis", "Serology", "Imaging & Scans", "Pharmacy", "Shop", "Consultation", "Other"] as const;
 export const PAYMENT_METHODS = ["Cash", "POS", "Transfer", "HMO"] as const;
 export const EXPENSE_CATEGORIES = [
-  "Reagents & Consumables", "Equipment & Maintenance", "Utilities & Fuel",
-  "Waste Disposal & Compliance", "Salaries & Staff", "Rent", "Logistics & Courier", "Administrative", "Other",
+  "Direct Lab Consumables", "Equipment & Maintenance", "Utilities & Facility", "Staff & Logistics", "Other",
 ] as const;
-/** Categories counted as direct cost of tests (COGS) in the P&L. */
-export const COGS_CATEGORIES = ["Reagents & Consumables"];
+export const EXPENSE_CATEGORY_HINTS: Record<string, string> = {
+  "Direct Lab Consumables": "Reagents, vacutainer tubes, rapid test strips",
+  "Equipment & Maintenance": "Analyzer repairs, calibration runs",
+  "Utilities & Facility": "Generator fuel, electricity, biohazard waste disposal",
+  "Staff & Logistics": "Locum fees, specimen couriers, office items",
+  "Other": "Anything else",
+};
+/** Categories counted as direct cost of tests (COGS) in the P&L ("Reagents & Consumables" kept for older entries). */
+export const COGS_CATEGORIES = ["Direct Lab Consumables", "Reagents & Consumables"];
+
+/** Day-end till: expected cash in drawer = cash taken − cash expenses paid out. Variance > 0 is overage, < 0 shortage. */
+export function tillVariance(cashCollected: number, cashExpenses: number, counted: number) {
+  const expected = Number(cashCollected || 0) - Number(cashExpenses || 0);
+  const variance = Number(counted || 0) - expected;
+  return { expected, variance, status: variance === 0 ? "Balanced" : variance > 0 ? "Overage" : "Shortage" } as const;
+}
 
 export interface Invoice {
   id: string; invoice_number: string; patient_name: string; patient_phone: string | null;
@@ -15,7 +28,7 @@ export interface Invoice {
 }
 export interface InvoiceItem { id?: string; description: string; department: string; quantity: number; unit_price: number }
 export interface Payment { id: string; invoice_id: string; amount: number; method: string; reference: string | null; created_at: string }
-export interface Expense { id: string; expense_number: string; category: string; vendor: string | null; description: string | null; amount: number; method: string; expense_date: string }
+export interface Expense { id: string; expense_number: string; category: string; vendor: string | null; description: string | null; amount: number; method: string; expense_date: string; receipt_url?: string | null }
 
 export const naira = (n: number) => "₦" + Number(n || 0).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { invoiceTotals, balanceDue, agingBucket, profitAndLoss, monthRange } from "./accounting";
+import { invoiceTotals, balanceDue, agingBucket, profitAndLoss, monthRange, tillVariance } from "./accounting";
 
 describe("accounting", () => {
   it("totals items and caps discount at subtotal", () => {
@@ -27,5 +27,14 @@ describe("accounting", () => {
   });
   it("month range", () => {
     expect(monthRange("2026-12")).toMatchObject({ startDate: "2026-12-01", endDate: "2027-01-01" });
+  });
+  it("till: expected cash is cash taken minus cash expenses", () => {
+    expect(tillVariance(50000, 5000, 45000)).toEqual({ expected: 45000, variance: 0, status: "Balanced" });
+    expect(tillVariance(50000, 5000, 44000)).toMatchObject({ variance: -1000, status: "Shortage" });
+    expect(tillVariance(50000, 0, 50500)).toMatchObject({ variance: 500, status: "Overage" });
+  });
+  it("new consumables category counts as COGS", () => {
+    const r = profitAndLoss([], [], [{ category: "Direct Lab Consumables", amount: 100 }, { category: "Utilities & Facility", amount: 50 }] as any);
+    expect(r).toMatchObject({ cogs: 100, opex: 50 });
   });
 });

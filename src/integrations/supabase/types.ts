@@ -54,6 +54,7 @@ export type Database = {
           expense_number: string
           id: string
           method: string
+          receipt_url: string | null
           recorded_by: string | null
           updated_at: string
           vendor: string | null
@@ -67,6 +68,7 @@ export type Database = {
           expense_number?: string
           id?: string
           method?: string
+          receipt_url?: string | null
           recorded_by?: string | null
           updated_at?: string
           vendor?: string | null
@@ -80,6 +82,7 @@ export type Database = {
           expense_number?: string
           id?: string
           method?: string
+          receipt_url?: string | null
           recorded_by?: string | null
           updated_at?: string
           vendor?: string | null
@@ -919,6 +922,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      till_closeouts: {
+        Row: {
+          cash_expenses: number
+          cashier_name: string | null
+          close_date: string
+          closed_by: string | null
+          counted_cash: number
+          created_at: string
+          expected_cash: number
+          expected_hmo: number
+          expected_pos: number
+          expected_transfer: number
+          id: string
+          manager_name: string | null
+          notes: string | null
+          updated_at: string
+          variance: number
+        }
+        Insert: {
+          cash_expenses?: number
+          cashier_name?: string | null
+          close_date?: string
+          closed_by?: string | null
+          counted_cash?: number
+          created_at?: string
+          expected_cash?: number
+          expected_hmo?: number
+          expected_pos?: number
+          expected_transfer?: number
+          id?: string
+          manager_name?: string | null
+          notes?: string | null
+          updated_at?: string
+          variance?: number
+        }
+        Update: {
+          cash_expenses?: number
+          cashier_name?: string | null
+          close_date?: string
+          closed_by?: string | null
+          counted_cash?: number
+          created_at?: string
+          expected_cash?: number
+          expected_hmo?: number
+          expected_pos?: number
+          expected_transfer?: number
+          id?: string
+          manager_name?: string | null
+          notes?: string | null
+          updated_at?: string
+          variance?: number
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
